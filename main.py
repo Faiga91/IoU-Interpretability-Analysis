@@ -8,8 +8,31 @@ import numpy as np
 
 
 IMAGES_DIR = "/Volumes/EmbryoScope/XAI/VGG16-New"
-THRESHOLD = 128
+THRESHOLD = 0.5
 iou_scores = []
+
+
+def images_to_masks(img_orig, img_lime, img_gradcam):
+    """Subtract the original image from the LIME and GradCAM images.
+    Then, apply a threshold to the resulting images to obtain the binary masks.
+    """
+    lime_gray = ImageOps.grayscale(img_lime)
+    gradcam_gray = ImageOps.grayscale(img_gradcam)
+    original_gray = ImageOps.grayscale(img_orig)
+
+    lime_array_gray = np.array(lime_gray)
+    gradcam_array_gray = np.array(gradcam_gray)
+    original_array_gray = np.array(original_gray)
+
+    gradcam_subtracted = gradcam_array_gray - original_array_gray
+    lime_subtracted = lime_array_gray - original_array_gray
+    gradcam_subtracted = np.clip(gradcam_subtracted, 0, 1)
+    lime_subtracted = np.clip(lime_subtracted, 0, 1)
+
+    lime_bin_mask = np.where(lime_subtracted > THRESHOLD, 1, 0)
+    gradcam_bin_mask = np.where(gradcam_subtracted > THRESHOLD, 1, 0)
+
+    return lime_bin_mask, gradcam_bin_mask
 
 
 def calculate_iou(mask1, mask2):
@@ -42,33 +65,19 @@ for subdir in os.listdir(IMAGES_DIR):
                 original_path = file_path
 
         if lime_path and gradcam_path and original_path:
-            lime_image = Image.open(lime_path)
-            gradcam_image = Image.open(gradcam_path)
             original_image = Image.open(original_path)
+            gradcam_image = Image.open(gradcam_path)
+            lime_image = Image.open(lime_path)
 
-            lime_array = np.array(lime_image).astype(float)
             lime_resized_image = lime_image.resize((224, 224))
-            gradcam_array = np.array(gradcam_image).astype(float)
-            original_array = np.array(original_image).astype(float)
 
-            lime_gray = ImageOps.grayscale(lime_resized_image)
-            gradcam_gray = ImageOps.grayscale(gradcam_image)
-            original_gray = ImageOps.grayscale(original_image)
-
-            lime_array_gray = np.array(lime_gray)
-            gradcam_array_gray = np.array(gradcam_gray)
-            original_array_gray = np.array(original_gray)
-
-            gradcam_subtracted = gradcam_array_gray - original_array_gray
-            lime_subtracted = lime_array_gray - original_array_gray
-            gradcam_subtracted = np.clip(gradcam_subtracted, 0, 1)
-            lime_subtracted = np.clip(lime_subtracted, 0, 1)
-
-            lime_binary_mask = np.where(lime_array_gray > THRESHOLD, 1, 0)
-            gradcam_binary_mask = np.where(gradcam_array_gray > THRESHOLD, 1, 0)
+            lime_binary_mask, gradcam_binary_mask = images_to_masks(
+                original_image, lime_resized_image, gradcam_image
+            )
 
             iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
             iou_scores.append([subdir, iou_score])
+
 
 df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-Score"])
 df.to_csv("VGG16-New_iou_scores.csv", index=False)
