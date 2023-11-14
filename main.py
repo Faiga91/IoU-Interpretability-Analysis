@@ -96,7 +96,12 @@ if __name__ == "__main__":
                 iou_scores.append([subdir, iou_score])
 
     df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-Score"])
-    file_name = os.path.basename(args.images_dir) + "_iou_scores.csv"
+    file_name = (
+        os.path.basename(args.images_dir)
+        + "-"
+        + str(args.threshold)
+        + "_iou_scores.csv"
+    )
     df.to_csv(file_name, index=False)
     print(f"A total of {len(iou_scores)} images folders were processed.")
-    print(f"The IoU scores are saved at {os.getcwd()}/VGG16-New_iou_scores.csv.")
+    print(f"The IoU scores are saved at {file_name}/VGG16-New_iou_scores.csv.")
