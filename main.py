@@ -2,6 +2,7 @@
 Main script to get the IOU score between the LIME and GradCAM masks.
 """
 import os
+import argparse
 import pandas as pd
 from PIL import Image, ImageOps
 import numpy as np
@@ -29,8 +30,8 @@ def images_to_masks(img_orig, img_lime, img_gradcam):
     gradcam_subtracted = np.clip(gradcam_subtracted, 0, 1)
     lime_subtracted = np.clip(lime_subtracted, 0, 1)
 
-    lime_bin_mask = np.where(lime_subtracted > THRESHOLD, 1, 0)
-    gradcam_bin_mask = np.where(gradcam_subtracted > THRESHOLD, 1, 0)
+    lime_bin_mask = np.where(lime_subtracted > args.threshold, 1, 0)
+    gradcam_bin_mask = np.where(gradcam_subtracted > args.threshold, 1, 0)
 
     return lime_bin_mask, gradcam_bin_mask
 
@@ -48,38 +49,54 @@ def calculate_iou(mask1, mask2):
     return iou_s
 
 
-for subdir in os.listdir(IMAGES_DIR):
-    subdir_path = os.path.join(IMAGES_DIR, subdir)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--images_dir",
+        type=str,
+        default=IMAGES_DIR,
+        help="Directory where the images are stored.",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=THRESHOLD,
+        help="Threshold to apply to the subtracted images.",
+    )
+    args = parser.parse_args()
 
-    if os.path.isdir(subdir_path):
-        lime_path, gradcam_path, original_path = None, None, None
+    for subdir in os.listdir(args.images_dir):
+        subdir_path = os.path.join(args.images_dir, subdir)
 
-        for file in os.listdir(subdir_path):
-            file_path = os.path.join(subdir_path, file)
+        if os.path.isdir(subdir_path):
+            lime_path, gradcam_path, original_path = None, None, None
 
-            if file == "positiveRegions.png":
-                lime_path = file_path
-            elif file == "Gcam_Image.png":
-                gradcam_path = file_path
-            elif file == f"{subdir}.png":
-                original_path = file_path
+            for file in os.listdir(subdir_path):
+                file_path = os.path.join(subdir_path, file)
 
-        if lime_path and gradcam_path and original_path:
-            original_image = Image.open(original_path)
-            gradcam_image = Image.open(gradcam_path)
-            lime_image = Image.open(lime_path)
+                if file == "positiveRegions.png":
+                    lime_path = file_path
+                elif file == "Gcam_Image.png":
+                    gradcam_path = file_path
+                elif file == f"{subdir}.png":
+                    original_path = file_path
 
-            lime_resized_image = lime_image.resize((224, 224))
+            if lime_path and gradcam_path and original_path:
+                original_image = Image.open(original_path)
+                gradcam_image = Image.open(gradcam_path)
+                lime_image = Image.open(lime_path)
 
-            lime_binary_mask, gradcam_binary_mask = images_to_masks(
-                original_image, lime_resized_image, gradcam_image
-            )
+                lime_resized_image = lime_image.resize((224, 224))
 
-            iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
-            iou_scores.append([subdir, iou_score])
+                lime_binary_mask, gradcam_binary_mask = images_to_masks(
+                    original_image, lime_resized_image, gradcam_image
+                )
 
+                iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
+                iou_scores.append([subdir, iou_score])
 
-df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-Score"])
-df.to_csv("VGG16-New_iou_scores.csv", index=False)
-print(f"A total of {len(iou_scores)} images folders were processed.")
-print(f"The IoU scores are saved at {os.getcwd()}/VGG16-New_iou_scores.csv.")
+    df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-Score"])
+    file_name = os.path.basename(args.images_dir) + "_iou_scores.csv"
+    df.to_csv(file_name, index=False)
+    print(f"A total of {len(iou_scores)} images folders were processed.")
+    print(f"The IoU scores are saved at {os.getcwd()}/VGG16-New_iou_scores.csv.")
