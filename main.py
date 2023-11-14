@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
                 iou_scores.append([subdir, iou_score])
 
-    df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-Score"])
+    df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-score"])
     file_name = (
         os.path.basename(args.images_dir)
         + "-"
