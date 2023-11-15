@@ -4,36 +4,13 @@ Main script to get the IOU score between the LIME and GradCAM masks.
 import os
 import argparse
 import pandas as pd
-from PIL import Image, ImageOps
+from PIL import Image
 import numpy as np
-
+from create_binary_masks import get_single_mask
 
 IMAGES_DIR = "/Volumes/EmbryoScope/XAI/VGG16-New"
-THRESHOLD = 0.5
+OUTPUT_DIR = "/Volumes/EmbryoScope/XAI/Results"
 iou_scores = []
-
-
-def images_to_masks(img_orig, img_lime, img_gradcam):
-    """Subtract the original image from the LIME and GradCAM images.
-    Then, apply a threshold to the resulting images to obtain the binary masks.
-    """
-    lime_gray = ImageOps.grayscale(img_lime)
-    gradcam_gray = ImageOps.grayscale(img_gradcam)
-    original_gray = ImageOps.grayscale(img_orig)
-
-    lime_array_gray = np.array(lime_gray)
-    gradcam_array_gray = np.array(gradcam_gray)
-    original_array_gray = np.array(original_gray)
-
-    gradcam_subtracted = gradcam_array_gray - original_array_gray
-    lime_subtracted = lime_array_gray - original_array_gray
-    gradcam_subtracted = np.clip(gradcam_subtracted, 0, 1)
-    lime_subtracted = np.clip(lime_subtracted, 0, 1)
-
-    lime_bin_mask = np.where(lime_subtracted > args.threshold, 1, 0)
-    gradcam_bin_mask = np.where(gradcam_subtracted > args.threshold, 1, 0)
-
-    return lime_bin_mask, gradcam_bin_mask
 
 
 def calculate_iou(mask1, mask2):
@@ -57,16 +34,15 @@ if __name__ == "__main__":
         default=IMAGES_DIR,
         help="Directory where the images are stored.",
     )
-    parser.add_argument(
-        "--threshold",
-        type=float,
-        default=THRESHOLD,
-        help="Threshold to apply to the subtracted images.",
-    )
+
     args = parser.parse_args()
 
     for subdir in os.listdir(args.images_dir):
         subdir_path = os.path.join(args.images_dir, subdir)
+        output_dir = os.path.join(OUTPUT_DIR, os.path.basename(subdir_path))
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
         if os.path.isdir(subdir_path):
             lime_path, gradcam_path, original_path = None, None, None
@@ -86,22 +62,30 @@ if __name__ == "__main__":
                 gradcam_image = Image.open(gradcam_path)
                 lime_image = Image.open(lime_path)
 
+                lime_image = lime_image.convert("RGB")
                 lime_resized_image = lime_image.resize((224, 224))
 
-                lime_binary_mask, gradcam_binary_mask = images_to_masks(
-                    original_image, lime_resized_image, gradcam_image
+                gradcam_binary_mask = get_single_mask(
+                    gradcam_path,
+                    os.path.join(output_dir, "gradcam_binary_mask.png"),
+                    (0, 100, 100),
+                    (90, 204, 218),
+                    "GradCAM",
+                )
+
+                lime_binary_mask = get_single_mask(
+                    lime_path,
+                    os.path.join(output_dir, "lime_binary_mask.png"),
+                    (20, 100, 100),
+                    (30, 255, 255),
+                    "LIME",
                 )
 
                 iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
                 iou_scores.append([subdir, iou_score])
 
     df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-score"])
-    file_name = (
-        os.path.basename(args.images_dir)
-        + "-"
-        + str(args.threshold)
-        + "_iou_scores.csv"
-    )
+    file_name = os.path.basename(args.images_dir) + "-" + "_iou_scores.csv"
     df.to_csv(file_name, index=False)
     print(f"A total of {len(iou_scores)} images folders were processed.")
     print(f"The IoU scores are saved at {file_name}/VGG16-New_iou_scores.csv.")
