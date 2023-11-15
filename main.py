@@ -23,7 +23,7 @@ def calculate_iou(mask1, mask2):
 
     iou_s = intersection_sum / union_sum if union_sum != 0 else 0
 
-    return iou_s
+    return intersection_sum, union_sum, iou_s
 
 
 if __name__ == "__main__":
@@ -81,10 +81,14 @@ if __name__ == "__main__":
                     "LIME",
                 )
 
-                iou_score = calculate_iou(lime_binary_mask, gradcam_binary_mask)
-                iou_scores.append([subdir, iou_score])
+                intersection, union, iou_score = calculate_iou(
+                    lime_binary_mask, gradcam_binary_mask
+                )
+                iou_scores.append([subdir, intersection, union, iou_score])
 
-    df = pd.DataFrame(iou_scores, columns=["Folder", "IoU-score"])
+    df = pd.DataFrame(
+        iou_scores, columns=["Folder", "Intersection", "Union", "IoU-score"]
+    )
     file_name = os.path.basename(args.images_dir) + "-" + "_iou_scores.csv"
     df.to_csv(file_name, index=False)
     print(f"A total of {len(iou_scores)} images folders were processed.")
