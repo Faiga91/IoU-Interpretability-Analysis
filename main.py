@@ -53,8 +53,8 @@ if __name__ == "__main__":
         subdir_path = os.path.join(args.images_dir, subdir)
         output_dir = os.path.join(args.output_dir, os.path.basename(subdir_path))
 
-        if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
         if os.path.isdir(subdir_path):
             lime_path, gradcam_path, original_path = None, None, None
