@@ -130,28 +130,24 @@ if __name__ == "__main__":
     parser.add_argument(
         "--lime_lower",
         type=str,
-        nargs="+",
         default="#146464",
         help="Lower bound for the LIME mask.",
     )
     parser.add_argument(
         "--lime_upper",
         type=str,
-        nargs="+",
         default="#1EFFFF",
         help="Upper bound for the LIME mask.",
     )
     parser.add_argument(
         "--gradcam_lower",
         type=str,
-        nargs="+",
         default="#006464",
         help="Lower bound for the GradCAM mask.",
     )
     parser.add_argument(
         "--gradcam_upper",
         type=str,
-        nargs="+",
         default="#1EFFFF",
         help="Upper bound for the GradCAM mask.",
     )
