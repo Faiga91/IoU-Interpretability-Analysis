@@ -15,6 +15,9 @@ iou_scores = []
 
 def calculate_iou(mask1, mask2):
     """Calculates the IOU score between two binary masks."""
+    mask1 = (mask1 > 0).astype(int)
+    mask2 = (mask2 > 0).astype(int)
+
     mask1_pixels_count = np.sum(mask1)
     mask2_pixels_count = np.sum(mask2)
 
