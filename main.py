@@ -37,15 +37,21 @@ if __name__ == "__main__":
         default=IMAGES_DIR,
         help="Directory where the images are stored.",
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=OUTPUT_DIR,
+        help="Directory where the results will be stored.",
+    )
 
     args = parser.parse_args()
 
     for subdir in os.listdir(args.images_dir):
         subdir_path = os.path.join(args.images_dir, subdir)
-        output_dir = os.path.join(OUTPUT_DIR, os.path.basename(subdir_path))
+        output_dir = os.path.join(args.output_dir, os.path.basename(subdir_path))
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
 
         if os.path.isdir(subdir_path):
             lime_path, gradcam_path, original_path = None, None, None
