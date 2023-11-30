@@ -7,10 +7,24 @@ import pandas as pd
 from PIL import Image
 import numpy as np
 from create_binary_masks import get_single_mask
+from dataclasses import dataclass
 
 IMAGES_DIR = "/Volumes/EmbryoScope/XAI/VGG16-New"
 OUTPUT_DIR = "/Volumes/EmbryoScope/XAI/Results"
 iou_scores = []
+
+
+@dataclass
+class ColorSelection:
+    lime_lower: tuple
+    lime_upper: tuple
+    gradcam_lower: tuple
+    gradcam_upper: tuple
+
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def calculate_iou(mask1, mask2):
@@ -32,26 +46,10 @@ def calculate_iou(mask1, mask2):
     return intersection_sum, union_sum, iou_s, mask1_pixels_count, mask2_pixels_count
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--images_dir",
-        type=str,
-        default=IMAGES_DIR,
-        help="Directory where the images are stored.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=OUTPUT_DIR,
-        help="Directory where the results will be stored.",
-    )
-
-    args = parser.parse_args()
-
-    for subdir in os.listdir(args.images_dir):
-        subdir_path = os.path.join(args.images_dir, subdir)
-        output_dir = os.path.join(args.output_dir, os.path.basename(subdir_path))
+def process_images(images_dir, output_dir, color_selection: ColorSelection):
+    for subdir in os.listdir(images_dir):
+        subdir_path = os.path.join(images_dir, subdir)
+        output_dir = os.path.join(output_dir, os.path.basename(subdir_path))
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -70,26 +68,26 @@ if __name__ == "__main__":
                     original_path = file_path
 
             if lime_path and gradcam_path and original_path:
-                original_image = Image.open(original_path)
-                gradcam_image = Image.open(gradcam_path)
+                Image.open(original_path)
+                Image.open(gradcam_path)
                 lime_image = Image.open(lime_path)
 
                 lime_image = lime_image.convert("RGB")
-                lime_resized_image = lime_image.resize((224, 224))
+                lime_image.resize((224, 224))
 
                 gradcam_binary_mask = get_single_mask(
                     gradcam_path,
                     os.path.join(output_dir, "gradcam_binary_mask.png"),
-                    (0, 100, 100),
-                    (90, 204, 218),
+                    color_selection.gradcam_lower,
+                    color_selection.gradcam_upper,
                     "GradCAM",
                 )
 
                 lime_binary_mask = get_single_mask(
                     lime_path,
                     os.path.join(output_dir, "lime_binary_mask.png"),
-                    (20, 100, 100),
-                    (30, 255, 255),
+                    color_selection.lime_lower,
+                    color_selection.lime_upper,
                     "LIME",
                 )
 
@@ -110,6 +108,62 @@ if __name__ == "__main__":
                         gradcam_pixels,
                     ]
                 )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--images_dir",
+        type=str,
+        default=IMAGES_DIR,
+        help="Directory where the images are stored.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=OUTPUT_DIR,
+        help="Directory where the results will be stored.",
+    )
+
+    parser.add_argument(
+        "--lime_lower",
+        type=str,
+        nargs="+",
+        default="#146464",
+        help="Lower bound for the LIME mask.",
+    )
+    parser.add_argument(
+        "--lime_upper",
+        type=str,
+        nargs="+",
+        default="#1EFFFF",
+        help="Upper bound for the LIME mask.",
+    )
+    parser.add_argument(
+        "--gradcam_lower",
+        type=str,
+        nargs="+",
+        default="#006464",
+        help="Lower bound for the GradCAM mask.",
+    )
+    parser.add_argument(
+        "--gradcam_upper",
+        type=str,
+        nargs="+",
+        default="#1EFFFF",
+        help="Upper bound for the GradCAM mask.",
+    )
+
+    args = parser.parse_args()
+
+    colors = ColorSelection(
+        lime_lower=hex_to_rgb(args.lime_lower),
+        lime_upper=hex_to_rgb(args.lime_upper),
+        gradcam_lower=hex_to_rgb(args.gradcam_lower),
+        gradcam_upper=hex_to_rgb(args.gradcam_upper),
+    )
+
+    iou_scores = process_images(args.images_dir, args.output_dir, colors)
 
     df = pd.DataFrame(
         iou_scores,
