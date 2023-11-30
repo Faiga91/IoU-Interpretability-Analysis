@@ -11,7 +11,6 @@ from dataclasses import dataclass
 
 IMAGES_DIR = "/Volumes/EmbryoScope/XAI/VGG16-New"
 OUTPUT_DIR = "/Volumes/EmbryoScope/XAI/Results"
-iou_scores = []
 
 
 @dataclass
@@ -47,6 +46,8 @@ def calculate_iou(mask1, mask2):
 
 
 def process_images(images_dir, output_dir, color_selection: ColorSelection):
+    iou_scores = []
+
     for subdir in os.listdir(images_dir):
         subdir_path = os.path.join(images_dir, subdir)
         output_dir = os.path.join(output_dir, os.path.basename(subdir_path))
