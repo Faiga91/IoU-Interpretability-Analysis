@@ -15,6 +15,9 @@ iou_scores = []
 
 def calculate_iou(mask1, mask2):
     """Calculates the IOU score between two binary masks."""
+    mask1_pixels_count = np.sum(mask1)
+    mask2_pixels_count = np.sum(mask2)
+
     intersection = np.logical_and(mask1, mask2)
     union = np.logical_or(mask1, mask2)
 
@@ -23,7 +26,7 @@ def calculate_iou(mask1, mask2):
 
     iou_s = intersection_sum / union_sum if union_sum != 0 else 0
 
-    return intersection_sum, union_sum, iou_s
+    return intersection_sum, union_sum, iou_s, mask1_pixels_count, mask2_pixels_count
 
 
 if __name__ == "__main__":
@@ -81,15 +84,36 @@ if __name__ == "__main__":
                     "LIME",
                 )
 
-                intersection, union, iou_score = calculate_iou(
-                    lime_binary_mask, gradcam_binary_mask
+                (
+                    intersection,
+                    union,
+                    iou_score,
+                    lime_pixels,
+                    gradcam_pixels,
+                ) = calculate_iou(lime_binary_mask, gradcam_binary_mask)
+                iou_scores.append(
+                    [
+                        subdir,
+                        intersection,
+                        union,
+                        iou_score,
+                        lime_pixels,
+                        gradcam_pixels,
+                    ]
                 )
-                iou_scores.append([subdir, intersection, union, iou_score])
 
     df = pd.DataFrame(
-        iou_scores, columns=["Folder", "Intersection", "Union", "IoU-score"]
+        iou_scores,
+        columns=[
+            "Folder",
+            "Intersection",
+            "Union",
+            "IoU-score",
+            "LIME pixels",
+            "GradCAM pixels",
+        ],
     )
     file_name = os.path.basename(args.images_dir) + "-" + "_iou_scores.csv"
     df.to_csv(file_name, index=False)
     print(f"A total of {len(iou_scores)} images folders were processed.")
-    print(f"The IoU scores are saved at {file_name}/VGG16-New_iou_scores.csv.")
+    print(f"The IoU scores are saved at {file_name}/iou_scores.csv.")
