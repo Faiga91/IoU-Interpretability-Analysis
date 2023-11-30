@@ -109,6 +109,7 @@ def process_images(images_dir, output_dir, color_selection: ColorSelection):
                         gradcam_pixels,
                     ]
                 )
+    return iou_scores
 
 
 if __name__ == "__main__":
