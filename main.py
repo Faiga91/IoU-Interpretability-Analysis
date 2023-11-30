@@ -120,6 +120,7 @@ if __name__ == "__main__":
         ],
     )
     file_name = os.path.basename(args.images_dir) + "-" + "_iou_scores.csv"
-    df.to_csv(file_name, index=False)
+    output_file_path = os.path.join(args.output_dir, file_name)
+    df.to_csv(output_file_path, index=False)
     print(f"A total of {len(iou_scores)} images folders were processed.")
-    print(f"The IoU scores are saved at {file_name}")
+    print(f"The IoU scores are saved at {output_file_path}")
